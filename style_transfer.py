@@ -7,7 +7,7 @@ import scipy.misc
 _STYLE_LAYERS = ['conv1_1', 'conv2_1', 'conv3_1', 'conv4_1', 'conv5_1']
 _CONTENT_LAYER = ['conv4_2']
 
-_LEARNING_RTE = 1.0E-3
+_LEARNING_RATE = 1.0E-3
 _OUTPUT_INFO_FREQUENCE = 10
 _OUTPUT_RESULT_FREQUENCE = 100
 
@@ -19,7 +19,7 @@ class StyleTransfer():
 
 		self.vgg19 = VGG19(vgg19_path)
 
-	def image_style_transfer(self, image_content, image_style, content_weight, style_weight, max_iteration = 1000):
+	def image_style_transfer(self, image_content, image_style, content_weight, style_weight, tv_weight, max_iteration = 1000, init_image = None):
 		image_shape = image_content.shape
 		with tf.Graph().as_default(), tf.Session() as session:
 			# extract feature from content and style
@@ -52,6 +52,8 @@ class StyleTransfer():
 			# predict new image
 			print 'constructing image-style-transfer net...'
 			init_tensor_value = (content_weight * image_content + style_weight * image_style) / (content_weight + style_weight)
+			if init_image is not None:
+				init_tensor_value = init_image
 			init_tensor_value = init_tensor_value.flatten()
 
 			pred_image = tf.get_variable(
@@ -75,20 +77,25 @@ class StyleTransfer():
 			for layer in _CONTENT_LAYER:
 				content_loss += tf.reduce_mean(tf.square(pred_net[layer] - content_feature_dic[layer]))
 
-			loss = style_weight * style_loss + content_weight * content_loss
+			# tv loss
+			x_loss = tf.reduce_mean(tf.square(pred_image[:,1:,:,:] - pred_image[:,0:-1,:,:]))
+			y_loss = tf.reduce_mean(tf.square(pred_image[:,:,1:,:] - pred_image[:,:,0:-1,:]))
+			tv_loss = 0.5 * (x_loss + y_loss)
 
-			opt = tf.train.AdamOptimizer(_LEARNING_RTE).minimize(loss)
+			loss = style_weight * style_loss + content_weight * content_loss + tv_weight * tv_loss
+
+			opt = tf.train.AdamOptimizer(_LEARNING_RATE).minimize(loss)
 
 			# run optimization for generating new image
 			session.run(tf.global_variables_initializer())
 
 			print 'start to generate image...'
 			for step in xrange(max_iteration):
-				_, generated_image, loss_val, style_loss_val, content_loss_val = session.run([opt, pred_image, loss, style_loss, content_loss])
+				_, generated_image, loss_val, style_loss_val, content_loss_val, tv_loss_val = session.run([opt, pred_image, loss, style_loss, content_loss, tv_loss])
 				step += 1
 
 				if step % _OUTPUT_INFO_FREQUENCE == 0:
-					print 'step: %d loss: %f, style_loss: %f, content_loss: %f'%(step, loss_val, style_loss_val, content_loss_val)
+					print 'step: %d loss: %f, style_loss: %f, content_loss: %f, tv_loss: %f'%(step, loss_val, style_loss_val, content_loss_val, tv_loss)
 
 				if step % _OUTPUT_RESULT_FREQUENCE == 0:
 					image = np.reshape(generated_image, image_content.shape)
