@@ -7,9 +7,9 @@ import scipy.misc
 _STYLE_LAYERS = ['conv1_1', 'conv2_1', 'conv3_1', 'conv4_1', 'conv5_1']
 _CONTENT_LAYER = ['conv4_2']
 
-_LEARNING_RATE = 1.0E-3
-_OUTPUT_INFO_FREQUENCE = 10
-_OUTPUT_RESULT_FREQUENCE = 100
+_LEARNING_RATE = 1.0
+_OUTPUT_INFO_FREQUENCE = 100
+_OUTPUT_RESULT_FREQUENCE = 1000
 
 class StyleTransfer():
 	def __init__(self, vgg19_path):
@@ -19,7 +19,7 @@ class StyleTransfer():
 
 		self.vgg19 = VGG19(vgg19_path)
 
-	def image_style_transfer(self, image_content, image_style, content_weight, style_weight, tv_weight, max_iteration = 1000, init_image = None):
+	def image_style_transfer(self, image_content, image_style, content_weight, style_weight, tv_weight, max_iteration = 5000, init_image = None):
 		image_shape = image_content.shape
 		with tf.Graph().as_default(), tf.Session() as session:
 			# extract feature from content and style
@@ -95,7 +95,7 @@ class StyleTransfer():
 				step += 1
 
 				if step % _OUTPUT_INFO_FREQUENCE == 0:
-					print 'step: %d loss: %f, style_loss: %f, content_loss: %f, tv_loss: %f'%(step, loss_val, style_loss_val, content_loss_val, tv_loss)
+					print 'step: %d loss: %f, style_loss: %f, content_loss: %f, tv_loss: %f'%(step, loss_val, style_loss_val, content_loss_val, tv_loss_val)
 
 				if step % _OUTPUT_RESULT_FREQUENCE == 0:
 					image = np.reshape(generated_image, image_content.shape)

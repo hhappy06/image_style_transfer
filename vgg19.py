@@ -44,11 +44,11 @@ class VGG19:
 
 	def inference(self, input_tensor):
 		# input_images is a placeholder with [None, height, width, nchannels]
-		r, g, b = tf.split(3, 3, input_tensor)
-		whiten_images = tf.concat(3, [
+		r, g, b = tf.split(input_tensor,3, 3)
+		whiten_images = tf.concat([
 			b - _VGG19_IMAGE_MEAN[0],
 			g - _VGG19_IMAGE_MEAN[1],
-			r - _VGG19_IMAGE_MEAN[2]])
+			r - _VGG19_IMAGE_MEAN[2]], 3)
 
 		net = {}
 		# construct VGG19 network -- convolution layer
